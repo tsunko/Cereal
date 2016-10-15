@@ -12,7 +12,7 @@ public class ShortBoxingService implements BoxingService<Short> {
     }
 
     @Override
-    public Short unserialize(ByteBuffer data){
+    public Short deserialize(ByteBuffer data){
         return data.getShort();
     }
 

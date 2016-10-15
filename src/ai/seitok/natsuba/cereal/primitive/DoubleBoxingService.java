@@ -12,7 +12,7 @@ public class DoubleBoxingService implements BoxingService<Double> {
     }
 
     @Override
-    public Double unserialize(ByteBuffer data){
+    public Double deserialize(ByteBuffer data){
         return data.getDouble();
     }
 

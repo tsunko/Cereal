@@ -12,7 +12,7 @@ public class FloatBoxingService implements BoxingService<Float> {
     }
 
     @Override
-    public Float unserialize(ByteBuffer data){
+    public Float deserialize(ByteBuffer data){
         return data.getFloat();
     }
 

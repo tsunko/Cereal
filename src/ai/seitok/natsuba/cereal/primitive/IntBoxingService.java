@@ -12,7 +12,7 @@ public class IntBoxingService implements BoxingService<Integer> {
     }
 
     @Override
-    public Integer unserialize(ByteBuffer data){
+    public Integer deserialize(ByteBuffer data){
         return data.getInt();
     }
 

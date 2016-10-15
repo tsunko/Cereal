@@ -10,7 +10,7 @@ public interface BoxingService<T> {
 
     public ByteBuffer serialize(T object);
 
-    public T unserialize(ByteBuffer data);
+    public T deserialize(ByteBuffer data);
 
     public int sizeOf(T object);
 

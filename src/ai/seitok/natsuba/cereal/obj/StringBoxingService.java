@@ -10,13 +10,14 @@ public class StringBoxingService implements BoxingService<String> {
     public ByteBuffer serialize(String string){
         ByteBuffer buf = ByteBuffer.allocate(sizeOf(string));
         buf.putInt(string.length());
-        buf.asCharBuffer().put(string.toCharArray());
+        buf.asCharBuffer().put(string);
         buf.flip();
+        System.out.println(buf.toString());
         return buf;
     }
 
     @Override
-    public String unserialize(ByteBuffer data){
+    public String deserialize(ByteBuffer data){
         int len = data.getInt();
         char[] chars = new char[len];
         data.asCharBuffer().get(chars);

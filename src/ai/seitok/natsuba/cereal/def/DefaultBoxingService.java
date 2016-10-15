@@ -3,11 +3,11 @@ package ai.seitok.natsuba.cereal.def;
 import ai.seitok.natsuba.cereal.Bowl;
 import ai.seitok.natsuba.cereal.BoxingService;
 import ai.seitok.natsuba.cereal.BoxingServiceFactory;
-import ai.seitok.natsuba.cereal.Grain;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,17 +23,21 @@ public class DefaultBoxingService<T> implements BoxingService<T> {
         Constructor<T> _constructor = null;
         try {
             if(!serializing.isAnnotationPresent(Bowl.class)){
-                throw new IllegalStateException("type was not marked as a Bowl");
+                throw new IllegalStateException(serializing + " was not marked as a Bowl");
             }
 
             _constructor = serializing.getConstructor();
             serializableFields = new ConcurrentHashMap<>();
 
             for(Field field : serializing.getDeclaredFields()){
-                if(!field.isAnnotationPresent(Grain.class)) continue;
+                if(Modifier.isTransient(field.getModifiers())){
+                    continue;
+                }
                 serializableFields.put(field, BoxingServiceFactory.getService(field.getType()));
+                System.out.println("Added " + field.getType());
             }
         } catch (NoSuchMethodException e){
+            e.printStackTrace();
             System.out.println("Constructor not found. Does " + serializing.getName() + " have a no-arg constructor?");
         } finally {
             constructor = _constructor;
@@ -58,7 +62,7 @@ public class DefaultBoxingService<T> implements BoxingService<T> {
     }
 
     @Override
-    public T unserialize(ByteBuffer data){
+    public T deserialize(ByteBuffer data){
         if(constructor == null)
             return null;
 
@@ -70,7 +74,7 @@ public class DefaultBoxingService<T> implements BoxingService<T> {
             throw new RuntimeException(e);
         }
 
-        serializableFields.forEach((field, service) -> set(ret, field, service.unserialize(data)));
+        serializableFields.forEach((field, service) -> set(ret, field, service.deserialize(data)));
         return ret;
     }
 
@@ -85,7 +89,7 @@ public class DefaultBoxingService<T> implements BoxingService<T> {
         // service.sizeOf(fieldVal) as BoxingService.sizeOf(Object)
         // otherwise, it's invoked as BoxingService<?>.sizeOf(?)
         // in which can't be called because there isn't a type named "?".
-        serializableFields
+        return serializableFields
                 .entrySet()
                 .stream()
                 .collect(Collectors.toMap(
@@ -96,14 +100,14 @@ public class DefaultBoxingService<T> implements BoxingService<T> {
                 .mapToInt(entry -> entry.getValue().sizeOf(get(object, entry.getKey())))
                 .sum();
 
-        BoxingService service;
-        for(Map.Entry<Field, BoxingService<?>> entry : serializableFields.entrySet()){
-            service = entry.getValue();
-            valSize = service.sizeOf(get(object, entry.getKey()));
-            size += valSize;
-        }
-
-        return size;
+//        BoxingService service;
+//        for(Map.Entry<Field, BoxingService<?>> entry : serializableFields.entrySet()){
+//            service = entry.getValue();
+//            valSize = service.sizeOf(get(object, entry.getKey()));
+//            size += valSize;
+//        }
+//
+//        return size;
     }
 
     @Override

@@ -33,11 +33,11 @@ public class GenericArrayBoxingService<T> implements BoxingService<T[]> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public T[] unserialize(ByteBuffer data){
+    public T[] deserialize(ByteBuffer data){
         Class<T> componentType;
 
         try {
-            componentType = (Class<T>)Class.forName(STRING_BOXING_SERVICE.unserialize(data));
+            componentType = (Class<T>)Class.forName(STRING_BOXING_SERVICE.deserialize(data));
         } catch (ClassNotFoundException e){
             e.printStackTrace();
             return null;
@@ -45,7 +45,7 @@ public class GenericArrayBoxingService<T> implements BoxingService<T[]> {
 
         T[] array = (T[])Array.newInstance(componentType, data.getInt());
         for(int i=0; i < array.length; i++){
-            array[i] = elementService.unserialize(data);
+            array[i] = elementService.deserialize(data);
         }
         return array;
     }

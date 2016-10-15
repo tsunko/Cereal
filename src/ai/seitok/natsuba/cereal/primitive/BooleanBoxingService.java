@@ -12,7 +12,7 @@ public class BooleanBoxingService implements BoxingService<Boolean> {
     }
 
     @Override
-    public Boolean unserialize(ByteBuffer data){
+    public Boolean deserialize(ByteBuffer data){
         return data.get() == 1;
     }
 

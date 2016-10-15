@@ -12,9 +12,8 @@ public class ListBoxingService<T> implements BoxingService<List<T>> {
 
     private Constructor<?> listConstructor;
     private boolean hasSizeConstructor;
-    private BoxingService<T> elementBoxer;
 
-    public ListBoxingService(Class<?> listClass, Class<T> listType){
+    public ListBoxingService(Class<?> listClass){
         try {
             listConstructor = listClass.getConstructor(int.class);
             hasSizeConstructor = true;
@@ -26,8 +25,6 @@ public class ListBoxingService<T> implements BoxingService<List<T>> {
                 System.out.println("no int-constructor nor default constructor found for list class " + listClass.getName());
             }
         }
-
-        elementBoxer = BoxingServiceFactory.getService(listType);
     }
 
     @Override
@@ -35,8 +32,11 @@ public class ListBoxingService<T> implements BoxingService<List<T>> {
         ByteBuffer buf = ByteBuffer.allocate(sizeOf(list));
         buf.putInt(list.size());
 
+        BoxingService service;
+        ByteBuffer elemBuf;
         for(T elem : list){
-            ByteBuffer elemBuf = elementBoxer.serialize(elem);
+            service = BoxingServiceFactory.getService(elem.getClass());
+            elemBuf = service.serialize(elem);
             buf.put(elemBuf);
         }
 
@@ -45,7 +45,7 @@ public class ListBoxingService<T> implements BoxingService<List<T>> {
     }
 
     @Override
-    public List<T> unserialize(ByteBuffer data){
+    public List<T> deserialize(ByteBuffer data){
         int len = data.getInt();
         List<T> list;
 
@@ -60,7 +60,8 @@ public class ListBoxingService<T> implements BoxingService<List<T>> {
         }
 
         while(len-- > 0){
-            list.add(elementBoxer.unserialize(data));
+            // TODO: Dynamically figure out objects. Not sure how.
+//            list.add(elementBoxer.deserialize(data));
         }
 
         return list;
@@ -69,8 +70,10 @@ public class ListBoxingService<T> implements BoxingService<List<T>> {
     @Override
     public int sizeOf(List<T> list){
         int size = Integer.BYTES;
+        BoxingService service;
         for(T elem : list){
-            size += elementBoxer.sizeOf(elem);
+            service = BoxingServiceFactory.getService(elem.getClass());
+            size += service.sizeOf(elem);
         }
         return size;
     }

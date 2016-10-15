@@ -12,7 +12,7 @@ public class LongBoxingService implements BoxingService<Long> {
     }
 
     @Override
-    public Long unserialize(ByteBuffer data){
+    public Long deserialize(ByteBuffer data){
         return data.getLong();
     }
 

@@ -12,7 +12,7 @@ public class ByteBoxingService implements BoxingService<Byte> {
     }
 
     @Override
-    public Byte unserialize(ByteBuffer data){
+    public Byte deserialize(ByteBuffer data){
         return data.get();
     }
 
