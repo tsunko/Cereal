@@ -6,7 +6,6 @@ import java.nio.ByteBuffer;
 
 public class NullBoxingService implements BoxingService {
 
-
     @Override
     public ByteBuffer serialize(Object theNull){
         ByteBuffer buffer = ByteBuffer.allocate(1);

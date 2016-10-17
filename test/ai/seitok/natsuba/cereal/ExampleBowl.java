@@ -7,7 +7,7 @@ public class ExampleBowl {
 
     public int aNumber = 4242564;
     public String aString = "The quick brown fox jumped over the lazy dog.";
-//    public EmbeddedBowl aBowlInABowl = new EmbeddedBowl();
+    public EmbeddedBowl aBowlInABowl = new EmbeddedBowl();
 
     // I'm probably going to get hate for this, but let it be known that this is just a test class.
     // Obviously, in production, we must always create objects that are thrown away the next GC cycle. /s
@@ -20,9 +20,14 @@ public class ExampleBowl {
         }
 
         ExampleBowl other = (ExampleBowl)obj;
-        return aNumber == other.aNumber;// &&
-//               aString.equals(other.aString); //&&
-//               aBowlInABowl.equals(other.aBowlInABowl);
+        return aNumber == other.aNumber &&
+               aString.equals(other.aString) &&
+               aBowlInABowl.equals(other.aBowlInABowl);
+    }
+
+    @Override
+    public String toString(){
+        return String.format("ExampleBowl{aNumber=%d, aString=%s, aBowlInABowl.embeddedString=%s}", aNumber, aString, aBowlInABowl.embeddedString);
     }
 
     @Bowl

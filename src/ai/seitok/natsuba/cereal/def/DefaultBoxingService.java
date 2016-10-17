@@ -11,7 +11,6 @@ import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 public class DefaultBoxingService<T> implements BoxingService<T> {
 
@@ -34,7 +33,6 @@ public class DefaultBoxingService<T> implements BoxingService<T> {
                     continue;
                 }
                 serializableFields.put(field, BoxingServiceFactory.getService(field.getType()));
-                System.out.println("Added " + field.getType());
             }
         } catch (NoSuchMethodException e){
             e.printStackTrace();
@@ -49,14 +47,7 @@ public class DefaultBoxingService<T> implements BoxingService<T> {
     @SuppressWarnings("unchecked") // todo: work around the need for a SuppressWarning.
     public ByteBuffer serialize(T object){
         ByteBuffer buffer = ByteBuffer.allocate(sizeOf(object));
-        // read sizeOf's comment as to why <?> is not used
-        serializableFields.entrySet().stream().collect(Collectors.toMap(
-                Map.Entry::getKey,
-                v -> (BoxingService)v.getValue()
-        )).forEach((field, service) -> {
-            ByteBuffer elemBuf = service.serialize(get(object, field));
-            buffer.put(elemBuf);
-        });
+        serializableFields.forEach((field, service) -> buffer.put(((BoxingService)service).serialize(get(object, field))));
         buffer.flip();
         return buffer;
     }
@@ -81,33 +72,13 @@ public class DefaultBoxingService<T> implements BoxingService<T> {
     @Override
     @SuppressWarnings("unchecked") // todo: work around the need for a SuppressWarning.
     public int sizeOf(T object){
-        int size = 0;
-        int valSize;
-
-        // we should technically have <?> after BoxingService
-        // but we have to erase the generic in order to actually perform
-        // service.sizeOf(fieldVal) as BoxingService.sizeOf(Object)
-        // otherwise, it's invoked as BoxingService<?>.sizeOf(?)
-        // in which can't be called because there isn't a type named "?".
         return serializableFields
                 .entrySet()
                 .stream()
-                .collect(Collectors.toMap(
-                    Map.Entry::getKey,
-                    item -> (BoxingService)item.getValue()
-                )).entrySet()
-                .stream()
-                .mapToInt(entry -> entry.getValue().sizeOf(get(object, entry.getKey())))
+                .mapToInt(
+                        entry -> ((BoxingService)entry.getValue()).sizeOf(get(object, entry.getKey()))
+                )
                 .sum();
-
-//        BoxingService service;
-//        for(Map.Entry<Field, BoxingService<?>> entry : serializableFields.entrySet()){
-//            service = entry.getValue();
-//            valSize = service.sizeOf(get(object, entry.getKey()));
-//            size += valSize;
-//        }
-//
-//        return size;
     }
 
     @Override
@@ -129,7 +100,8 @@ public class DefaultBoxingService<T> implements BoxingService<T> {
         try {
             field.set(obj, value);
         } catch (ReflectiveOperationException e){
-            System.out.println("Failed to set field for serialization");
+            System.out.println("Failed to set field for deserialization");
+            e.printStackTrace();
         }
     }
 

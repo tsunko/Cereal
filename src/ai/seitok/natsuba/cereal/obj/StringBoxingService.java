@@ -10,9 +10,10 @@ public class StringBoxingService implements BoxingService<String> {
     public ByteBuffer serialize(String string){
         ByteBuffer buf = ByteBuffer.allocate(sizeOf(string));
         buf.putInt(string.length());
-        buf.asCharBuffer().put(string);
+        for(char c : string.toCharArray()){
+            buf.putChar(c);
+        }
         buf.flip();
-        System.out.println(buf.toString());
         return buf;
     }
 
@@ -20,7 +21,9 @@ public class StringBoxingService implements BoxingService<String> {
     public String deserialize(ByteBuffer data){
         int len = data.getInt();
         char[] chars = new char[len];
-        data.asCharBuffer().get(chars);
+        for(int i=0; i < chars.length; i++){
+            chars[i] = data.getChar();
+        }
         return new String(chars);
     }
 

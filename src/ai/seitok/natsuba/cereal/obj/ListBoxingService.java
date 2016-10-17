@@ -3,41 +3,36 @@ package ai.seitok.natsuba.cereal.obj;
 import ai.seitok.natsuba.cereal.BoxingService;
 import ai.seitok.natsuba.cereal.BoxingServiceFactory;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ListBoxingService<T> implements BoxingService<List<T>> {
 
-    private Constructor<?> listConstructor;
-    private boolean hasSizeConstructor;
-
-    public ListBoxingService(Class<?> listClass){
-        try {
-            listConstructor = listClass.getConstructor(int.class);
-            hasSizeConstructor = true;
-        } catch (NoSuchMethodException e1){
-            try {
-                listConstructor = listClass.getConstructor();
-                hasSizeConstructor = false;
-            } catch (NoSuchMethodException e2){
-                System.out.println("no int-constructor nor default constructor found for list class " + listClass.getName());
-            }
-        }
-    }
+    private static final BoxingService<String> STRING_SERVICE = BoxingServiceFactory.getService(String.class);
 
     @Override
     public ByteBuffer serialize(List<T> list){
         ByteBuffer buf = ByteBuffer.allocate(sizeOf(list));
+        boolean diverse = isDiverse(list);
         buf.putInt(list.size());
+        buf.put((byte)(diverse ? 1 : 0));
 
-        BoxingService service;
-        ByteBuffer elemBuf;
-        for(T elem : list){
-            service = BoxingServiceFactory.getService(elem.getClass());
-            elemBuf = service.serialize(elem);
-            buf.put(elemBuf);
+        BoxingService service = null;
+        if(diverse){
+            for(T elem : list){
+                service = BoxingServiceFactory.getService(elem.getClass());
+                buf.put(STRING_SERVICE.serialize(elem.getClass().getName()));
+                buf.put(service.serialize(elem));
+            }
+        } else {
+            for(T elem : list){
+                if(service == null){
+                    service = BoxingServiceFactory.getService(elem.getClass());
+                    buf.put(STRING_SERVICE.serialize(elem.getClass().getName()));
+                }
+                buf.put(service.serialize(elem));
+            }
         }
 
         buf.flip();
@@ -47,21 +42,24 @@ public class ListBoxingService<T> implements BoxingService<List<T>> {
     @Override
     public List<T> deserialize(ByteBuffer data){
         int len = data.getInt();
-        List<T> list;
+        boolean isDiverseList = data.get() == 1;
+        List<T> list = new ArrayList<>();
+        BoxingService service;
 
         try {
-            if(hasSizeConstructor){
-                list = (List<T>)listConstructor.newInstance(len);
+            if(isDiverseList){
+                while(len-- > 0){
+                    service = BoxingServiceFactory.getService(Class.forName(STRING_SERVICE.deserialize(data)));
+                    list.add((T)service.deserialize(data));
+                }
             } else {
-                list = (List<T>)listConstructor.newInstance();
+                service = BoxingServiceFactory.getService(Class.forName(STRING_SERVICE.deserialize(data)));
+                while(len-- > 0){
+                    list.add((T)service.deserialize(data));
+                }
             }
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e){
-            throw new RuntimeException(e); // throw it up more
-        }
-
-        while(len-- > 0){
-            // TODO: Dynamically figure out objects. Not sure how.
-//            list.add(elementBoxer.deserialize(data));
+        } catch (ClassNotFoundException e){
+            // log error
         }
 
         return list;
@@ -69,18 +67,50 @@ public class ListBoxingService<T> implements BoxingService<List<T>> {
 
     @Override
     public int sizeOf(List<T> list){
+        boolean diverse = isDiverse(list);
         int size = Integer.BYTES;
+        size += 1; // allow single byte to indicate if dynamic or not
+        if(list.size() < 0) return size;
+
         BoxingService service;
-        for(T elem : list){
-            service = BoxingServiceFactory.getService(elem.getClass());
-            size += service.sizeOf(elem);
+        if(diverse){
+            for(Object elem : list){
+                service = BoxingServiceFactory.getService(elem.getClass());
+                size += STRING_SERVICE.sizeOf(elem.getClass().getName());
+                size += service.sizeOf(elem);
+            }
+        } else {
+            size += STRING_SERVICE.sizeOf(list.get(0).getClass().getName());
+            for(Object elem : list){
+                service = BoxingServiceFactory.getService(elem.getClass());
+                size += service.sizeOf(elem);
+            }
         }
         return size;
     }
 
     @Override
     public Class<List<T>> getType(){
-        return (Class<List<T>>)listConstructor.getDeclaringClass();
+        Class<?> klass = new ArrayList<T>().getClass();
+        return (Class<List<T>>)klass;
     }
+
+    private boolean isDiverse(List<?> list){
+        Class<?> lastClass = null;
+        for(Object o : list){
+            if(o == null) continue;
+
+            if(lastClass == null){
+                lastClass = o.getClass();
+                continue;
+            }
+
+            if(o.getClass() != lastClass){
+                return true;
+            }
+        }
+        return false;
+    }
+
 
 }
